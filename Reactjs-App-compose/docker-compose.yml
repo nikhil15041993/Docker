@@ -1,0 +1,68 @@
+version: '2.2'
+
+services:
+
+  mysql_db:
+    image: mysql
+    restart: always
+    cap_add:
+      - SYS_NICE
+    volumes:
+      - "./setup.sql:/docker-entrypoint-initdb.d/setup.sql"
+    ports:
+      - "9906:3306"
+    env_file:
+      - ./.env
+
+
+
+  nginx:
+    depends_on:
+      - api
+      - client
+    restart: always
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    ports:
+      - "80:80"
+
+
+
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: "./server"
+    depends_on:
+      - mysql_db
+    volumes:
+#      - /app/node_modules
+      - ./server:/app
+    env_file:
+      - ./.env
+
+
+
+  client:
+    stdin_open: true
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    build:
+      dockerfile: Dockerfile
+      context: ./client
+    volumes:
+#      - /app/node_modules
+      - ./client:/app
+
+
+
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    ports:
+      - 8000:8080
+    depends_on:
+      - mysql_db
+    env_file:
+      - ./.env          
+
